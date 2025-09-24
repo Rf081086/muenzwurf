@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Münzwurf-Simulation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 6px 12px;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+    }
+    .result-box {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #888;
+      max-width: 400px;
+    }
+    canvas {
+      margin: 20px 0;
+      max-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Münzwurf-Simulation</h1>
+
+  <label for="anzahl">Anzahl der Würfe:</label>
+  <input type="number" id="anzahl" value="100" min="1">
+  <button onclick="simulate()">Simulieren</button>
+
+  <div id="summary"></div>
+  <canvas id="chart"></canvas>
+  <div id="output"></div>
+
+  <script>
+    let chartInstance = null;
+
+    function simulate() {
+      const anzahl = parseInt(document.getElementById('anzahl').value) || 10;
+      const ergebnisse = [];
+      let kopf = 0, zahl = 0;
+      const relVerlauf = [];
+
+      for (let i = 0; i < anzahl; i++) {
+        if (Math.random() < 0.5) {
+          ergebnisse.push("Kopf");
+          kopf++;
+        } else {
+          ergebnisse.push("Zahl");
+          zahl++;
+        }
+        relVerlauf.push(kopf / (i+1));
+      }
+
+      // Ergebnisbox
+      const relKopf = (kopf/anzahl*100).toFixed(2);
+      const relZahl = (zahl/anzahl*100).toFixed(2);
+      const summary = `
+        <div class="result-box">
+          <strong>Gesamt (${anzahl} Würfe):</strong><br>
+          Kopf: ${kopf} (${relKopf}%)<br>
+          Zahl: ${zahl} (${relZahl}%)
+        </div>
+      `;
+      document.getElementById("summary").innerHTML = summary;
+
+      // Tabelle aufbauen
+      let tableHTML = "<table><tr><th>Wurf</th><th>Ergebnis</th></tr>";
+      ergebnisse.forEach((erg, i) => {
+        tableHTML += `<tr><td>${i+1}</td><td>${erg}</td></tr>`;
+      });
+      tableHTML += "</table>";
+      document.getElementById("output").innerHTML = tableHTML;
+
+      // Grafik zeichnen
+      drawChart(relVerlauf);
+    }
+
+    function drawChart(relVerlauf) {
+      const labels = relVerlauf.map((_, i) => i+1);
+      const sigmaUpper = labels.map(n => 0.5 + Math.sqrt(0.25/n));
+      const sigmaLower = labels.map(n => 0.5 - Math.sqrt(0.25/n));
+
+      const data = {
+        labels: labels,
+        datasets: [
+          {
+            label: "Relative Häufigkeit (Kopf)",
+            data: relVerlauf,
+            borderColor: "blue",
+            backgroundColor: "blue",
+            showLine: false,
+            pointRadius: 3
+          },
+          {
+            label: "Erwartungswert 0.5",
+            data: labels.map(() => 0.5),
+            borderColor: "black",
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+          },
+          {
+            label: "+1σ",
+            data: sigmaUpper,
+            borderColor: "green",
+            backgroundColor: "green",
+            showLine: false,
+            pointRadius: 2
+          },
+          {
+            label: "-1σ",
+            data: sigmaLower,
+            borderColor: "red",
+            backgroundColor: "red",
+            showLine: false,
+            pointRadius: 2
+          }
+        ]
+      };
+
+      const config = {
+        type: 'line',
+        data: data,
+        options: {
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Wurfnummer"
+              }
+            },
+            y: {
+              min: 0,
+              max: 1,
+              title: {
+                display: true,
+                text: "Relative Häufigkeit Kopf"
+              }
+            }
+          }
+        }
+      };
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+      chartInstance = new Chart(
+        document.getElementById('chart'),
+        config
+      );
+    }
+  </script>
+</body>
+</html>
